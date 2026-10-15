@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>巷口食堂 - 抗凝血藥物飲食衛教遊戲 (橫向 Tablet 專用)</title>
+    <style>
+        :root {
+            font-size: 22px; 
+            --wood-color-top: #A07F5E; 
+            --wood-color-tray: #8C6239; 
+            --steel-color: #D1D5DB;
+            --wall-color: #F4EBD0;
+            --text-color: #4A4A4A;
+            --safe-color: #2E7D32;
+            --avoid-color: #C62828;
+            --mid-color: #D35400;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--wall-color);
+            font-family: "Microsoft JhengHei", sans-serif;
+            color: var(--text-color);
+            cursor: pointer;
+            user-select: none;
+            overflow-x: hidden;
+            overflow-y: auto;
+            min-height: 100vh;
+            width: 100%;
+            background-image: url('巷口食堂內背景.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+
+        #bg-dimmer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(244, 235, 208, 0.7);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body.game-active #bg-dimmer {
+            opacity: 1;
+        }
+
+        /* --- 初始說明面板區塊 --- */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 24px;
+            z-index: 100;
+            background: transparent;
+            transition: opacity 0.5s;
+        }
+        .intro-panel {
+            background-color: #F4EBD0; 
+            border: 8px solid #5C3A21; 
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 996px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+        }
+        .intro-panel p {
+            font-size: 1.25rem;
+            line-height: 1.8;
+            text-align: left;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .intro-panel h2 {
+            color: #D35400;
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #D35400;
+            padding-bottom: 10px;
+        }
+        #start-btn {
+            padding: 16px 40px;
+            font-size: 1.6rem;
+            background-color: #E67E22;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(230, 126, 34, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(230, 126, 34, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(230, 126, 34, 0); }
+        }
+
+        /* --- 遊戲主容器 --- */
+        #game-container {
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+            align-items: center;
+            gap: clamp(16px, 2vw, 24px);
+            min-height: 100vh;
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: clamp(16px, 2vw, 24px);
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        body.game-active #game-container {
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        /* 左側：菜檯區 */
+        #left-area {
+            min-width: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            box-sizing: border-box;
+            padding: 20px 16px;
+            gap: 16px;
+        }
+        
+        .counter-title {
+            color: #FFD700;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.9);
+            font-size: clamp(1.2rem, 2.7vw, 1.65rem);
+            line-height: 1.35;
+            font-weight: bold;
+            z-index: 3;
+            margin: 0;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+
+        #wooden-table {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box; 
+            background-color: var(--wood-color-top);
+            background-image: url('木紋餐桌桌面.jpg'); 
+            background-size: cover;
+            border-top: 8px solid #7E5132;
+            box-shadow: inset 0px 5px 10px rgba(0,0,0,0.4), 10px 5px 20px rgba(0,0,0,0.5); 
+            border-radius: 30px 30px 0 0;
+            z-index: 1;
+        }
+
+        #food-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+            width: 100%;
+            min-width: 0;
+            z-index: 2;
+            padding: 0;
+        }
+
+        .food-item {
+            background-color: transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-width: 0;
+            gap: 4px;
+        }
+
+        .food-item:hover {
+            transform: none;
+        }
+
+        .food-item .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+            position: static;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 4px;
+            color: #2F2016;
+            background: rgba(255,248,220,0.94);
+            border: 1px solid #8C6239;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+            pointer-events: none;
+            box-shadow: none;
+        }
+
+        .food-item:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .food-item.selected {
+            visibility: hidden; 
+            pointer-events: none;
+        }
+
+        .food-img {
+            display: block;
+            width: 100%;
+            max-width: 180px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+            filter: drop-shadow(4px 6px 6px rgba(0,0,0,0.5));
+        }
+
+        #food-1 .food-img,
+        #food-3 .food-img {
+            transform: scale(1.45);
+            pointer-events: none;
+        }
+
+        /* 右側：餐盤與磅秤區 */
+        #right-area {
+            min-width: 0;
+            width: 100%;
+            max-width: 420px;
+            justify-self: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-sizing: border-box;
+            z-index: 2;
+        }
+
+        #tray-area {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 400 / 369;
+            background-image: url('自助餐餐盤.png');
+            background-size: 169.25% 100%;
+            background-repeat: no-repeat;
+            background-position: 52% center;
+            filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.3));
+        }
+
+        .tray-slot {
+            position: absolute;
+            top: 16%;
+            height: 29%;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #slot-0 {
+            left: 8%; width: 24%;
+        }  
+        #slot-1 {
+            left: 36%; width: 25%;
+        } 
+        #slot-2 {
+            left: 66%; width: 24%;
+        } 
+
+        .tray-slot img {
+            width: 120%;
+            max-width: none;
+            height: 100%;
+            flex-shrink: 0;
+            object-fit: contain;
+            border-radius: 10px;
+            filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.3));
+        }
+
+        /* 水煮玉米在餐盤上的個別比例縮放微調 */
+        .tray-slot img[alt="水煮玉米"] {
+            transform: none;
+        }
+
+        /* 磅秤區 */
+        #scale-area {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #e4e9ed;
+            border: 6px solid #2f3234;
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 5px 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #scale-area h3 {
+            margin: 0 0 12px;
+            font-size: clamp(1.05rem, 2.2vw, 1.5rem);
+            line-height: 1.3;
+            color: #4A2311;
+            width: 100%;
+        }
+
+        .scale-layout {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 16px;
+        }
+
+        .scale-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 0;
+        }
+
+        #scale-dial {
+            width: 180px; 
+            height: 90px;
+            background: #fff;
+            border-radius: 90px 90px 0 0;
+            border: 5px solid #333;
+            position: relative;
+            margin-bottom: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        #scale-pointer {
+            width: 6px; 
+            height: 90px;
+            background: #D32F2F;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: rotate(-60deg);
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #scale-level {
+            font-size: 1.4rem; 
+            font-weight: bold;
+            margin: 5px 0;
+            color: #2C3E50;
+        }
+
+        .round-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 0;
+            min-width: 0;
+            justify-content: center;
+        }
+
+        .card {
+            background: #FFF8DC;
+            padding: 8px 10px; 
+            border-radius: 8px;
+            font-size: 1.1rem; 
+            font-weight: bold;
+            border: 2px solid #C0A080;
+        }
+
+        button.action-btn {
+            padding: 14px 28px; 
+            font-size: clamp(1.05rem, 2vw, 1.4rem);
+            min-height: 48px;
+            font-weight: bold;
+            background-color: #E67E22;
+            color: white;
+            border: none;
+            border-radius: 12px; 
+            cursor: pointer;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+            margin: 10px 0 0 0; 
+            transition: background-color 0.2s;
+        }
+        button.action-btn:hover:not(:disabled) { background-color: #D35400; }
+        button.action-btn:disabled {
+            background-color: #A6ACAF;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* --- 階段 4：便當式結算畫面 --- */
+        #result-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            height: 100dvh;
+            box-sizing: border-box;
+            padding: 16px;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .result-box {
+            background: #F4EBD0;
+            border: 8px solid #8C6239;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 1400px;
+            padding: clamp(16px, 2vw, 30px) clamp(16px, 2.5vw, 40px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            box-sizing: border-box;
+            max-height: calc(100vh - 32px);
+            max-height: calc(100dvh - 32px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .result-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #8C6239;
+            padding-bottom: 10px;
+        }
+        .result-header h2 {
+            font-size: 2.2rem;
+            color: #D35400;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        .score-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            background: #FFF8DC;
+            padding: 8px 25px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 10px;
+            border: 3px solid #C0A080;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin: 10px 0;
+        }
+        
+        .bento-card {
+            background: #FFFFFF;
+            border: 4px solid #C0A080;
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .bento-card-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            margin-bottom: 10px;
+            border-bottom: 2px dashed #C0A080;
+            padding-bottom: 5px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .bento-food-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 10px 0;
+            width: 100%;
+            min-height: 120px; 
+        }
+        
+        /* 依據含量等級給予不同底色 */
+        .bento-food-list li {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: center;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        .bento-food-list li.food-high { background-color: #FFEBEE; color: #C62828; } 
+        .bento-food-list li.food-mid { background-color: #FFF8E1; color: #D35400; }  
+        .bento-food-list li.food-low { background-color: #E8F5E9; color: #2E7D32; }  
+        
+        .bento-verdict {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: auto;
+            padding: 12px 0;
+            color: #555;
+            background-color: #f0f0f0;
+            width: 100%;
+            border-radius: 8px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .bento-verdict .composition {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 8px;
+        }
+        .bento-verdict .val {
+            font-size: 1.8rem;
+            color: #D35400;
+            font-weight: 900;
+        }
+        .bento-verdict .unit {
+            font-size: 1rem;
+            color: #333;
+            font-weight: normal;
+        }
+
+        /* 總結區塊 */
+        .summary-reminder {
+            background: #FFF3E0;
+            border: 4px dashed #D35400;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.3rem;
+            line-height: 1.6;
+            font-weight: bold;
+            color: #333;
+            margin-top: 20px;
+            border-radius: 12px;
+        }
+
+        .summary-reminder h3 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .summary-reminder span.warning { color: var(--avoid-color); }
+        .summary-reminder span.success { color: var(--safe-color); }
+
+        .disclaimer {
+            font-size: 1.1rem;
+            color: #666;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .restart-btn {
+            margin: 20px auto 0 auto;
+            padding: 12px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: #E67E22;
+            color: #FFF;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.4);
+            transition: transform 0.1s;
+        }
+        .restart-btn:active { transform: translateY(3px); }
+    
+        /* Keep all result sections readable through normal scrolling. */
+        .food-item.selected .tooltip-text { visibility: hidden; }
+        .result-box > * { flex-shrink: 0; }
+        .bento-card { min-width: 0; }
+        .bento-verdict, .bento-food-list li { overflow-wrap: anywhere; }
+
+        /* Compact spacing for the supported landscape tablet heights. */
+        @media (orientation: landscape) and (max-height: 820px) {
+            #game-container { padding: 16px; gap: 20px; }
+            #left-area { padding: 16px 12px; gap: 12px; }
+            .counter-title { font-size: 1.25rem; }
+            #food-grid { gap: 8px; }
+            .food-item .tooltip-text { font-size: 0.7rem; line-height: 1.35; }
+            #right-area { max-width: 400px; gap: 16px; }
+            #scale-area { padding: 12px; }
+            .scale-layout { gap: 12px; }
+        }
+        /* CoaguPlay platform navigation; kept outside the game layout. */
+        .cq-home-link {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            z-index: 50;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            border: 2px solid #0F766E;
+            border-radius: 999px;
+            background: #F0FDFA;
+            color: #134E4A;
+            box-shadow: 0 3px 10px rgba(15, 38, 39, 0.22);
+            font: 700 15px/1.2 "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .cq-home-link:hover { background: #CCFBF1; }
+        .cq-home-link:focus-visible {
+            outline: 3px solid #F59E0B;
+            outline-offset: 3px;
+        }
+        .cq-home-link--result {
+            position: static;
+            align-self: center;
+            flex-shrink: 0;
+            margin: 12px auto 0;
+        }
+
+</style>
+</head>
+<body>
+
+<div id="bg-dimmer"></div>
+
+<!-- 初始說明面板 -->
+<div id="intro-screen">
+    <div class="intro-panel">
+        <h2>★歡迎來到巷口食堂★</h2>
+        <p>1.每個餐盤請選 2~3 道菜，依據您選取的菜色組合，進行維生素K攝取穩定性評估。</p>
+        <p>2.維生素K是一種脂溶性維生素，可幫助人體血液正常凝固，但與抗凝血藥物(Warfarin)作用拮抗，當攝取量不穩定時，會影響抗凝血劑藥物的治療效果！</p>
+		<p>3.維生素K在深綠色蔬菜、動物性內臟、發酵品含量會較多！請留意「穩定均衡飲食」！</p>
+        <button id="start-btn" onclick="startGame()">開始選擇</button>
+    </div>
+</div>
+
+<div id="game-container">
+    <a class="cq-home-link" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    
+    <!-- 左半部：桌面與菜色區 -->
+    <div id="left-area">
+        <h2 class="counter-title">請選擇 2~3 樣配菜 (第 <span id="current-round">1</span>/3 回合)</h2>
+        <div id="wooden-table"></div> 
+        <div id="food-grid"></div>
+    </div>
+
+    <!-- 右半部：餐盤與磅秤區 -->
+    <div id="right-area">
+        <div id="tray-area">
+            <div id="slot-0" class="tray-slot"></div>
+            <div id="slot-1" class="tray-slot"></div>
+            <div id="slot-2" class="tray-slot"></div>
+        </div>
+
+        <div id="scale-area">
+            <h3>本盤總維生素K</h3>
+            
+            <div class="scale-layout">
+                <div class="scale-left">
+                    <div id="scale-dial">
+                        <div id="scale-pointer"></div>
+                    </div>
+                    <div id="scale-level">數值：0</div>
+                    <button id="next-btn" class="action-btn" disabled onclick="submitRound()">完成本盤</button>
+                </div>
+                
+                <div class="round-cards">
+                    <div class="card">R1: <span id="r1-score">-</span></div>
+                    <div class="card">R2: <span id="r2-score">-</span></div>
+                    <div class="card">R3: <span id="r3-score">-</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<!-- 便當式結算畫面 -->
+<div id="result-screen">
+    <div class="result-box">
+        <div class="result-header">
+            <h2>巷口食堂 - 飲食分析報告</h2>
+            <div class="score-display">認知評估結果：<span id="final-cognition-level" style="font-size: 2.2rem; font-weight: 900;">-</span></div>
+        </div>
+        
+        <div class="bento-grid" id="bento-grid-results">
+            <!-- 動態生成三回合的便當卡片 -->
+        </div>
+
+        <!-- 總結分析區塊 -->
+        <div class="summary-reminder" id="final-summary-text">
+            <!-- 動態生成總結建議 -->
+        </div>
+        
+        <div class="disclaimer">
+            💡 本測驗為認知評估工具，協助檢視日常飲食觀念。若對您的用藥紀錄或飲食有任何疑問，請務必洽詢專業醫療人員。
+        </div>
+
+        <button class="restart-btn" onclick="location.reload()">重新挑戰</button>
+        <a class="cq-home-link cq-home-link--result" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    </div>
+</div>
+
+<script>
+    // 食物資料清單
+    const foodData = [
+        // --- 高含量 (>100mcg) ---
+        { id: 1, name: "涼拌菠菜", level: "high", val: 463.4, img: "涼拌菠菜.png", portionSize: "半碗", img_餐盤: "涼拌菠菜_餐盤.png" },
+        { id: 2, name: "蠔油炒芥藍", level: "high", val: 363.5, img: "蠔油炒芥藍.png", portionSize: "半碗", img_餐盤: "蠔油炒芥藍_餐盤.png" }, 
+        { id: 3, name: "炒綠花椰菜", level: "high", val: 143.05, img: "炒綠花椰菜.png", portionSize: "半碗", img_餐盤: "炒綠花椰菜_餐盤.png" },
+        { id: 4, name: "韭菜炒蛋", level: "high", val: 154.97, img: "韭菜炒蛋.png", portionSize: "半碗", img_餐盤: "韭菜炒蛋_餐盤.png" }, 
+        { id: 5, name: "醬爆高麗菜", level: "high", val: 104.1, img: "醬爆高麗菜.png", portionSize: "八分滿碗", img_餐盤: "醬爆高麗菜_餐盤.png" }, 
+
+        // --- 中含量 (30-100mcg) ---
+        { id: 6, name: "涼拌小黃瓜", level: "mid", val: 51.58, img: "涼拌小黃瓜.png", portionSize: "八分滿碗", img_餐盤: "涼拌小黃瓜_餐盤.png" },
+        { id: 7, name: "涼拌秋葵", level: "mid", val: 98.48, img: "涼拌秋葵.png", portionSize: "半碗", img_餐盤: "涼拌秋葵_餐盤.png" },
+        { id: 8, name: "芹菜炒肉絲", level: "mid", val: 42.5, img: "芹菜炒肉絲.png", portionSize: "半碗", img_餐盤: "芹菜炒肉絲_餐盤.png" },
+        { id: 9, name: "清炒蘆筍", level: "mid", val: 31.54, img: "清炒蘆筍.png", portionSize: "半碗", img_餐盤: "清炒蘆筍_餐盤.png" },
+        { id: 10, name: "韓式泡菜", level: "mid", val: 33, img: "韓式泡菜.png", portionSize: "半碗", img_餐盤: "韓式泡菜_餐盤.png" },
+
+        // --- 低含量 (<30mcg) ---
+        { id: 11, name: "水煮玉米", level: "low", val: 10, img: "水煮玉米.png", portionSize: "半碗", img_餐盤: "水煮玉米_餐盤.png" },
+        { id: 12, name: "涼拌竹筍", level: "low", val: 0.35, img: "涼拌竹筍.png", portionSize: "八分滿碗", img_餐盤: "涼拌竹筍_餐盤.png" }, 
+        { id: 13, name: "鹹蛋苦瓜", level: "low", val: 0.4, img: "鹹蛋苦瓜.png", portionSize: "八分滿碗", img_餐盤: "鹹蛋苦瓜_餐盤.png" }, 
+        { id: 14, name: "醬燒茄子", level: "low", val: 3.5, img: "醬燒茄子.png", portionSize: "半碗", img_餐盤: "醬燒茄子_餐盤.png" },
+        { id: 15, name: "蒜炒白花菜", level: "low", val: 15.75, img: "蒜炒白花菜.png", portionSize: "八分滿碗", img_餐盤: "蒜炒白花菜_餐盤.png" } 
+    ];
+
+    let currentRound = 1;
+    let selectedFoods = []; 
+    let allRoundsData = []; 
+
+    function createImageFallback(name) {
+        const safeName = name.replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+        })[char]);
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">
+            <rect x="8" y="22" width="134" height="78" rx="10" fill="#F7F1E5" stroke="#8C6239"/>
+            <text x="75" y="56" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#5B3A29">圖片暫缺</text>
+            <text x="75" y="82" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#5B3A29">${safeName}</text>
+        </svg>`;
+        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function startGame() {
+        document.getElementById('intro-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.display = 'none';
+        }, 500);
+        
+        document.body.classList.add('game-active');
+    }
+
+    function initFoodGrid() {
+        const grid = document.getElementById('food-grid');
+        grid.innerHTML = ''; 
+        
+        // 核心機制：已選過的菜色不再出現
+        let usedFoodIds = allRoundsData.flatMap(r => r.foods.map(f => f.id));
+        let availableFoods = foodData.filter(f => !usedFoodIds.includes(f.id));
+
+        const shuffled = [...availableFoods].sort(() => 0.5 - Math.random());
+        
+        shuffled.forEach(food => {
+            const div = document.createElement('div');
+            div.className = 'food-item';
+            div.id = `food-${food.id}`;
+            div.onclick = () => selectFood(food);
+            
+            const img = document.createElement('img');
+            img.className = 'food-img';
+            img.src = food.img; 
+            img.alt = food.name;
+            img.onerror = function() { this.onerror = null; this.src = createImageFallback(food.name); };
+
+            const tooltipText = document.createElement('span');
+            tooltipText.className = 'tooltip-text';
+            tooltipText.innerText = `${food.name}，一份約${food.portionSize}`;
+
+            div.appendChild(img);
+            div.appendChild(tooltipText); 
+            grid.appendChild(div);
+        });
+    }
+
+    function selectFood(food) {
+        if (selectedFoods.length >= 3) return; 
+
+        selectedFoods.push(food);
+        
+        document.getElementById(`food-${food.id}`).classList.add('selected');
+        
+        updateTray();
+        updateScalePointer();
+
+        // 選滿 2~3 道菜即可送出
+        if (selectedFoods.length >= 2) {
+            document.getElementById('next-btn').disabled = false;
+        }
+    }
+
+    function updateTray() {
+        for (let i = 0; i < 3; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            slot.innerHTML = '';
+            if (selectedFoods[i]) {
+                const img = document.createElement('img');
+                img.src = selectedFoods[i].img_餐盤;
+                img.alt = selectedFoods[i].name;
+                img.onerror = function() { this.onerror = null; this.src = createImageFallback(selectedFoods[i].name); };
+                slot.appendChild(img);
+            }
+        }
+    }
+
+    function updateScalePointer() {
+        const currentK = selectedFoods.reduce((sum, f) => sum + f.val, 0);
+        
+        let deg = -60 + (currentK / 1000) * 120; 
+        if (deg > 60) deg = 60; 
+        document.getElementById('scale-pointer').style.transform = `rotate(${deg}deg)`;
+        
+        document.getElementById('scale-level').innerText = `數值：${currentK.toFixed(1)}`;
+        document.getElementById('scale-level').style.color = '#333';
+    }
+
+    function submitRound() {
+        const currentK = selectedFoods.reduce((sum, f) => sum + f.val, 0);
+        
+        allRoundsData.push({ 
+            score: currentK, 
+            foods: [...selectedFoods] 
+        });
+
+        document.getElementById(`r${currentRound}-score`).innerText = currentK.toFixed(1);
+
+        if (currentRound < 3) {
+            currentRound++;
+            document.getElementById('current-round').innerText = currentRound;
+            selectedFoods = []; 
+            updateTray(); 
+            updateScalePointer(); 
+            initFoodGrid(); // 重新載入未選過的菜色
+            document.getElementById('next-btn').disabled = true;
+        } else {
+            showBentoSummary();
+        }
+    }
+
+    function showBentoSummary() {
+        document.getElementById('result-screen').style.display = 'flex';
+        const grid = document.getElementById('bento-grid-results');
+        grid.innerHTML = '';
+
+        // 將每餐的菜色組合轉換為 (高,中,低) 比例向量
+        let vectors = allRoundsData.map(round => {
+            let counts = { high: 0, mid: 0, low: 0 };
+            round.foods.forEach(f => {
+                counts[f.level]++;
+            });
+            let total = round.foods.length;
+            return {
+                h: counts.high / total,
+                m: counts.mid / total,
+                l: counts.low / total,
+                counts: counts // 保留原始數量供顯示使用
+            };
+        });
+
+        // 計算三餐之間「最大比例差距」(Total Variation Distance)
+        let maxDiff = 0;
+        for(let i=0; i<vectors.length; i++) {
+            for(let j=i+1; j<vectors.length; j++) {
+                let diff = 0.5 * (
+                    Math.abs(vectors[i].h - vectors[j].h) +
+                    Math.abs(vectors[i].m - vectors[j].m) +
+                    Math.abs(vectors[i].l - vectors[j].l)
+                );
+                if (diff > maxDiff) maxDiff = diff;
+            }
+        }
+
+        // 連續函數計分：滿分 100，隨最大比例差距增加自然下降
+        let totalScore = Math.round((1 - maxDiff) * 100);
+
+        // 繪製便當小卡
+        allRoundsData.forEach((round, idx) => {
+            const card = document.createElement('div');
+            card.className = `bento-card`;
+
+            let foodListHtml = "";
+            round.foods.forEach(f => {
+                let bgClass = "";
+                if (f.level === "high") bgClass = "food-high";
+                else if (f.level === "mid") bgClass = "food-mid";
+                else bgClass = "food-low";
+
+                foodListHtml += `<li class="${bgClass}"><span>${f.name}</span></li>`;
+            });
+
+            // 計算結算畫面的「高中低」百分比顯示
+            let totalItems = round.foods.length;
+            let vecCounts = vectors[idx].counts;
+            let hPct = Math.round((vecCounts.high / totalItems) * 100);
+            let mPct = Math.round((vecCounts.mid / totalItems) * 100);
+            let lPct = Math.round((vecCounts.low / totalItems) * 100);
+
+            // 結算畫面卡片底部：顯示「組成比例」與「該盤維生素K總含量」
+            card.innerHTML = `
+                <div class="bento-card-title">餐盤 ${idx + 1}</div>
+                <ul class="bento-food-list">
+                    ${foodListHtml}
+                </ul>
+                <div class="bento-verdict">
+                    <div class="composition">
+                        組成：高 ${hPct}%｜中 ${mPct}%｜低 ${lPct}%
+                    </div>
+                    維生素K總含量<br>
+                    <span class="val">${round.score.toFixed(1)}</span> <span class="unit">mcg</span>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // 依據後台總分，顯示對應的認知評等文字與顏色
+        const cognitionLevelText = document.getElementById('final-cognition-level');
+        const summaryText = document.getElementById('final-summary-text');
+        
+        let finalLevel = "";
+        let summaryHtml = "";
+
+        if (totalScore >= 81) {
+            finalLevel = "高";
+            cognitionLevelText.innerText = finalLevel;
+            cognitionLevelText.style.color = "var(--safe-color)";
+            summaryHtml = `
+                <h3 style="color:var(--safe-color);">太棒了！您各餐之間的維生素K攝取比例非常一致。</h3>
+                👉 使用 Warfarin 時，<span class="success">不需要刻意避開含維生素K的食物</span>，重要的是維持每天、每餐穩定均衡的攝取習慣（例如每餐都固定選擇同一級別，或每餐都平均搭配各級別的蔬菜）。
+            `;
+        } else if (totalScore >= 60) {
+            finalLevel = "中";
+            cognitionLevelText.innerText = finalLevel;
+            cognitionLevelText.style.color = "var(--mid-color)";
+            summaryHtml = `
+                <h3 style="color:var(--mid-color);">再注意一下！您各餐之間的維生素K攝取比例稍微有些波動。</h3>
+                👉 您的各餐攝取級別大致相近，但仍有起伏。<span class="warning">維持固定且相近比例的飲食習慣，避免忽多忽少，能讓藥效更穩定。</span>
+            `;
+        } else {
+            finalLevel = "低";
+            cognitionLevelText.innerText = finalLevel;
+            cognitionLevelText.style.color = "var(--avoid-color)";
+            summaryHtml = `
+                <h3 style="color:var(--avoid-color);">需要再留意！您各餐之間的維生素K攝取比例落差過大，極不穩定。</h3>
+                各餐之間若經常出現明顯的維生素K攝取變化，可能影響 Warfarin 的抗凝血效果與 INR 穩定性。<br>
+                👉 請盡量保持每餐食物級別比例的一致性。
+            `;
+        }
+
+        summaryText.innerHTML = summaryHtml;
+    }
+
+    window.onload = initFoodGrid;
+
+</script>
+</body>
+</html>

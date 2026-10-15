@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>時光小屋 - 漏服藥補服大考驗</title>
+    <style>
+        :root {
+            font-size: 18px;
+            --retro-wood-dark: #3E2723;
+            --retro-wood: #5C3A21;
+            --retro-wood-light: #8C6239;
+            --paper-bg: #F9EBC8;
+            --paper-light: #FFF8E7;
+            --text-dark: #2C1A0B;
+            --safe-color: #2E7D32;
+            --avoid-color: #C62828;
+            --accent-blue: #1E3A5F;
+            --gray-color: #888888;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #EFEBE9;
+            font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+            color: var(--text-dark);
+            user-select: none;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            min-height: 100vh;
+            width: 100vw;
+            background-image: url('時光小屋客廳.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            transition: background-image 0.8s ease;
+        }
+
+        #bg-dimmer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1;
+            pointer-events: none;
+        }
+        body.game-active #bg-dimmer {
+            opacity: 1;
+        }
+
+        /* --- 初始說明面板 --- */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: opacity 0.5s ease;
+        }
+        .intro-panel {
+            background-color: #FFFFFF;
+            border: 10px solid var(--retro-wood);
+            padding: 40px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 10px 15px 30px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .intro-panel h2 {
+            color: var(--retro-wood-dark);
+            font-size: 2.2rem;
+            margin-top: 0;
+            border-bottom: 4px dashed var(--retro-wood-light);
+            padding-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .intro-panel p {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            text-align: left;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+        #start-btn {
+            margin-top: 20px;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            font-family: inherit;
+            font-weight: bold;
+            background-color: var(--retro-wood);
+            color: #F9EBC8;
+            border: 3px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--retro-wood-dark);
+            transition: transform 0.1s;
+        }
+        #start-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px var(--retro-wood-dark);
+        }
+
+        /* --- 遊戲主容器 --- */
+        #game-container {
+            display: none;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 10;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 階段 1：選擇藥物畫面 */
+        #step-drug-selection {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .med-bag-preview {
+            width: 450px;
+            height: 550px;
+            background: #FAFAFA url('藥袋.jpg') center/cover no-repeat;
+            border: 6px solid var(--retro-wood-dark);
+            border-radius: 12px;
+            box-shadow: 8px 12px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .dialog-panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--paper-bg);
+            border: 6px solid var(--retro-wood);
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: 8px 12px 25px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .dialog-panel h3 {
+            font-size: 1.8rem;
+            color: var(--retro-wood-dark);
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .select-btn {
+            background-color: #FFFFFF;
+            border: 4px solid var(--retro-wood-light);
+            border-radius: 8px;
+            padding: 18px 10px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            cursor: pointer;
+            box-shadow: 3px 5px 10px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+        }
+        .select-btn:hover {
+            background-color: #FFF3E0;
+            border-color: var(--retro-wood);
+            transform: translateY(-2px);
+        }
+        .select-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0px 0px 0px;
+        }
+
+        /* 階段 2：輸入平時用藥時間 */
+        #step-time-input {
+            display: none;
+            width: 100%;
+            max-width: 950px;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .time-setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .time-input-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .time-select {
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 8px 15px;
+            border: 3px solid var(--retro-wood);
+            border-radius: 6px;
+            background: #FFF;
+            color: var(--retro-wood-dark);
+        }
+        .confirm-btn {
+            margin-top: 15px;
+            padding: 12px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            background-color: var(--retro-wood);
+            color: #FFF;
+            border: 3px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .confirm-btn:active { transform: translateY(2px); }
+
+        /* 階段 3：情境測驗 */
+        #step-scenario {
+            display: none;
+            width: 100%;
+            max-width: 1050px;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .clock-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .current-time-badge {
+            background-color: #FFFFFF;
+            border: 6px solid var(--retro-wood-dark);
+            border-radius: 12px;
+            padding: 10px 25px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            box-shadow: 4px 6px 12px rgba(0,0,0,0.4);
+            letter-spacing: 2px;
+        }
+
+        .clock-wrapper {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: #EFEBE9 url('乾淨鐘面底圖.jpg') center/cover no-repeat;
+            border: 8px solid var(--retro-wood-dark);
+            box-shadow: 10px 15px 30px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+        }
+        .clock-face {
+            width: 100%; height: 100%; position: relative;
+        }
+        .clock-hand {
+            position: absolute;
+            bottom: 50%; left: 50%;
+            transform-origin: bottom center;
+            background-color: #222;
+            border-radius: 4px;
+            transition: transform 0.8s cubic-bezier(0.4, 1.4, 0.6, 1);
+            z-index: 10;
+        }
+        #hour-hand { width: 10px; height: 90px; margin-left: -5px; }
+        #minute-hand { width: 6px; height: 120px; margin-left: -3px; background-color: #444; }
+        .clock-center-dot {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 22px; height: 22px;
+            background-color: var(--retro-wood);
+            border: 3px solid #111;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 12;
+        }
+        .clock-digital-time {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid var(--retro-wood);
+            padding: 4px 15px;
+            border-radius: 6px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+        }
+
+        .scenario-box {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--paper-bg);
+            border: 6px solid var(--retro-wood);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 8px 12px 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 400px;
+        }
+        .scenario-header {
+            border-bottom: 2px dashed var(--retro-wood-light);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--retro-wood-dark);
+        }
+
+        /* --- 時間軸樣式 --- */
+        .timeline-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+            padding: 15px 10px;
+            margin-bottom: 15px;
+            border: 2px solid var(--retro-wood-light);
+        }
+        .timeline-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        .timeline-line {
+            flex: 1;
+            height: 4px;
+            background-color: var(--retro-wood-light);
+            margin: 0 -20px;
+            z-index: 1;
+            margin-top: -15px;
+        }
+        .time-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            margin-bottom: 8px;
+        }
+        .status-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 4px solid #FFF;
+            background-color: var(--gray-color);
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            margin-bottom: 8px;
+        }
+        .timeline-node.taken .status-dot { background-color: var(--safe-color); }
+        .timeline-node.missed .status-dot { background-color: var(--avoid-color); }
+        .status-text {
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .timeline-node.taken .status-text { color: var(--safe-color); }
+        .timeline-node.missed .status-text { color: var(--avoid-color); }
+        .timeline-node.future .status-text { color: var(--gray-color); }
+
+        .scenario-question {
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 1.6;
+            color: var(--text-dark);
+            margin: 10px 0;
+            text-align: center;
+        }
+        .scenario-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .action-choice-btn {
+            padding: 16px 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 4px solid;
+            cursor: pointer;
+            transition: transform 0.1s;
+            text-align: center;
+        }
+        .action-choice-btn:active { transform: translateY(3px); }
+        .btn-take { background: #E8F5E9; border-color: var(--safe-color); color: var(--safe-color); }
+        .btn-skip { background: #FFEBEE; border-color: var(--avoid-color); color: var(--avoid-color); }
+
+        /* --- 階段 4：結算畫面 --- */
+        #result-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; min-height: 100vh;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .result-box {
+            background: var(--paper-bg);
+            border: 6px solid var(--retro-wood);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1400px;
+            padding: 35px 45px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            box-sizing: border-box;
+        }
+        .result-header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid var(--retro-wood);
+            padding-bottom: 15px;
+        }
+        .result-header h2 {
+            font-size: 2.5rem;
+            color: var(--retro-wood-dark);
+            margin: 0 0 10px 0;
+        }
+        .score-stats {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--accent-blue);
+        }
+        
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin: 15px 0;
+        }
+        .bento-card {
+            background: #FFFFFF;
+            border: 3px solid var(--retro-wood-light);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .bento-card.correct { border-top: 10px solid var(--safe-color); }
+        .bento-card.wrong { border-top: 10px solid var(--avoid-color); }
+
+        .bento-clock-mini {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 4px solid var(--retro-wood);
+            background: #FFF8E7;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .mini-hand {
+            position: absolute;
+            bottom: 50%; left: 50%;
+            transform-origin: bottom center;
+            background: #222;
+        }
+        .bento-card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--retro-wood-dark);
+            margin-bottom: 8px;
+        }
+        .bento-user-choice {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: #EEE;
+        }
+        .bento-verdict {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .bento-verdict.correct { color: var(--safe-color); }
+        .bento-verdict.wrong { color: var(--avoid-color); }
+        
+        .bento-explanation {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #222;
+            background: #F5F5F5;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: auto;
+            border-left: 5px solid var(--retro-wood-light);
+        }
+
+        .summary-reminder {
+            background: #FFF3E0;
+            border: 3px dashed var(--avoid-color);
+            padding: 20px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--avoid-color);
+            margin-top: 25px;
+            border-radius: 10px;
+        }
+        .disclaimer {
+            font-size: 1.1rem;
+            color: #555;
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .restart-btn {
+            margin: 25px auto 0 auto;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: var(--safe-color);
+            color: #FFF;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 2px 5px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .restart-btn:active { transform: translateY(3px); }
+
+        /* --- 客製大字體提示視窗 --- */
+        #custom-alert-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+        }
+        .custom-alert-box {
+            background-color: var(--paper-bg);
+            border: 6px solid var(--retro-wood);
+            border-radius: 12px;
+            padding: 35px 30px;
+            width: 90%;
+            max-width: 580px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+            box-sizing: border-box;
+        }
+        .alert-icon {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+        }
+        .alert-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--avoid-color);
+            margin-bottom: 15px;
+        }
+        .alert-message {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 25px;
+        }
+        .alert-btn {
+            padding: 14px 45px;
+            font-size: 1.5rem;
+            font-family: inherit;
+            font-weight: bold;
+            background-color: var(--retro-wood);
+            color: #FFF;
+            border: 3px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 3px 4px 0px var(--retro-wood-dark);
+            transition: transform 0.1s;
+        }
+        .alert-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px;
+        }
+        /* CoaguPlay platform navigation; kept outside the game layout. */
+        .cq-home-link {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            z-index: 50;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            border: 2px solid #0F766E;
+            border-radius: 999px;
+            background: #F0FDFA;
+            color: #134E4A;
+            box-shadow: 0 3px 10px rgba(15, 38, 39, 0.22);
+            font: 700 15px/1.2 "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .cq-home-link:hover { background: #CCFBF1; }
+        .cq-home-link:focus-visible {
+            outline: 3px solid #F59E0B;
+            outline-offset: 3px;
+        }
+        .cq-home-link--result {
+            position: static;
+            align-self: center;
+            flex-shrink: 0;
+            margin: 12px auto 0;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="bg-dimmer"></div>
+
+<!-- 客製化大字體提示彈窗 -->
+<div id="custom-alert-modal">
+    <div class="custom-alert-box">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-title">用藥時間提醒</div>
+        <div class="alert-message" id="custom-alert-message">
+            1日服用2次，兩次給藥時間應間隔 8～16 小時，請重新調整設定！
+        </div>
+        <button class="alert-btn" onclick="closeCustomAlert()">我知道了</button>
+    </div>
+</div>
+
+<!-- 說明頁面 -->
+<div id="intro-screen">
+    <div class="intro-panel">
+        <h2>★ 時光小屋 ★</h2>
+        <p>★ 歡迎回來時光小屋，今天您帶家人到醫院定期回診領藥，整理藥袋時留意到抗凝血藥物，想起剛剛藥師有提醒一些注意事項。</p>
+        <p>★ 因為接下來幾天您要出門，無法協助家人打理生活事務，故今天主要任務：確認家人理解如何正確用藥（包含漏服藥物時的處理原則）。</p>
+        <button id="start-btn" onclick="startApp()">開始</button>
+    </div>
+</div>
+
+<!-- 遊戲核心容器 -->
+<div id="game-container">
+    <a class="cq-home-link" href="../../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    
+    <!-- 階段 1：選擇藥物 -->
+    <div id="step-drug-selection">
+        <div class="med-bag-preview">
+            <span id="preview-drug-name" style="display: none;"></span>
+        </div>
+        <div class="dialog-panel">
+            <h3>請問目前家人使用的是哪一種抗凝血藥物？</h3>
+            <div class="btn-grid">
+                <button class="select-btn" onclick="selectDrug('Warfarin', 1)">Warfarin (可化凝)</button>
+                <button class="select-btn" onclick="selectDrug('Rivaroxaban', 1)">Rivaroxaban (拜瑞妥)</button>
+                <button class="select-btn" onclick="selectDrug('Apixaban', 2)">Apixaban (艾必克凝)</button>
+                <button class="select-btn" onclick="selectDrug('Dabigatran', 2)">Dabigatran (普栓達)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 階段 2：輸入平常服藥時間 -->
+    <div id="step-time-input">
+        <div class="clock-wrapper" style="width: 280px; height: 280px;">
+            <div class="clock-face">
+                <div id="preview-hour" class="clock-hand" style="height: 70px; transform: rotate(0deg);"></div>
+                <div id="preview-min" class="clock-hand" style="height: 100px; transform: rotate(0deg); background:#555;"></div>
+                <div class="clock-center-dot"></div>
+            </div>
+        </div>
+        <div class="dialog-panel">
+            <h3 id="time-input-title">請輸入平日服藥時間 (24小時制)</h3>
+            <div class="time-setting-group" id="time-input-fields">
+                <!-- 動態注入時間選單 -->
+            </div>
+            <button class="confirm-btn" onclick="confirmTimeSettings()">確認時間並進入情境</button>
+        </div>
+    </div>
+
+    <!-- 階段 3：情境測驗 (動態時鐘 + 題目) -->
+    <div id="step-scenario">
+        <div class="clock-section">
+            <div class="current-time-badge" id="current-time-badge">現在時間：--:--</div>
+            <div class="clock-wrapper">
+                <div class="clock-face">
+                    <div id="hour-hand" class="clock-hand"></div>
+                    <div id="minute-hand" class="clock-hand"></div>
+                    <div class="clock-center-dot"></div>
+                </div>
+                <div class="clock-digital-time" id="scenario-digital-clock">00:00</div>
+            </div>
+        </div>
+
+        <div class="scenario-box">
+            <div>
+                <div class="scenario-header">
+                    <span id="scenario-progress">情境 1 / 3</span>
+                    <span id="scenario-drug-badge" style="color:var(--retro-wood-light);">藥物：--</span>
+                </div>
+                
+                <!-- 時間軸注入區 -->
+                <div id="timeline-area"></div>
+
+                <div class="scenario-question" id="scenario-question-text">
+                    糟糕！忘記吃藥了！<br>現在應該立刻補吃嗎？
+                </div>
+            </div>
+
+            <div class="scenario-actions">
+                <button class="action-choice-btn btn-take" onclick="submitScenarioChoice('take')">✔️ 可以補用</button>
+                <button class="action-choice-btn btn-skip" onclick="submitScenarioChoice('skip')">❌ 不能補用，下次正常吃就好</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 階段 4：便當式結算面板 -->
+<div id="result-screen">
+    <div class="result-box">
+        <div class="result-header">
+            <h2>漏服藥補服判定 - 學習成果報告</h2>
+            <div class="score-stats" id="final-score-stats">答對率：--% | 認知度：--</div>
+        </div>
+        
+        <div class="bento-grid" id="bento-grid-results">
+            <!-- 便當卡片動態生成於此 -->
+        </div>
+
+        <!-- 這裡加上 id 讓 JavaScript 可以找到並替換文字 -->
+        <div class="summary-reminder" id="summary-rule-text">
+            💡 核心原則載入中...
+        </div>
+        
+        <div class="disclaimer">
+            💡 本測驗為認知前/後測之評估工具，無法取代藥師與醫師的專業衛教指導。若對您的用藥有任何疑問，請務必洽詢專業醫療人員。
+        </div>
+
+        <button class="restart-btn" onclick="location.reload()">重新挑戰</button>
+        <a class="cq-home-link cq-home-link--result" href="../../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    </div>
+</div>
+
+<script>
+    let gameState = {
+        drugName: "",
+        dailyDoses: 1,
+        scheduledTimes: [],
+        currentScenarioIndex: 0,
+        scenarios: [],
+        userAnswers: []
+    };
+
+    function showCustomAlert(msg) {
+        document.getElementById('custom-alert-message').innerText = msg;
+        document.getElementById('custom-alert-modal').style.display = 'flex';
+    }
+
+    function closeCustomAlert() {
+        document.getElementById('custom-alert-modal').style.display = 'none';
+    }
+
+    function startApp() {
+        const intro = document.getElementById('intro-screen');
+        intro.style.opacity = '0';
+        setTimeout(() => {
+            intro.style.display = 'none';
+            document.body.classList.add('game-active');
+            document.getElementById('game-container').style.display = 'flex';
+        }, 500);
+    }
+
+    function selectDrug(name, doses) {
+        gameState.drugName = name;
+        gameState.dailyDoses = doses;
+        setTimeout(() => {
+            document.getElementById('step-drug-selection').style.display = 'none';
+            setupTimeInputStep();
+        }, 300);
+    }
+
+    function setupTimeInputStep() {
+        document.getElementById('step-time-input').style.display = 'flex';
+        const fields = document.getElementById('time-input-fields');
+        fields.innerHTML = '';
+
+        if (gameState.dailyDoses === 1) {
+            fields.innerHTML = `
+                <div class="time-input-row">
+                    <label>每日固定服藥時間：</label>
+                    <select id="time-picker-1" class="time-select" onchange="updatePreviewClock()">
+                        ${generateHourOptions(8)}
+                    </select>
+                </div>
+            `;
+        } else {
+            fields.innerHTML = `
+                <div class="time-input-row">
+                    <label>第 1 次服藥時間 (早)：</label>
+                    <select id="time-picker-1" class="time-select" onchange="updatePreviewClock()">
+                        ${generateHourOptions(8)}
+                    </select>
+                </div>
+                <div class="time-input-row">
+                    <label>第 2 次服藥時間 (晚)：</label>
+                    <select id="time-picker-2" class="time-select">
+                        ${generateHourOptions(18)}
+                    </select>
+                </div>
+            `;
+        }
+        updatePreviewClock();
+    }
+
+    function formatHour(h) {
+        return (h < 10 ? '0' + h : h) + ':00';
+    }
+
+    function generateHourOptions(defaultHour) {
+        let html = '';
+        for (let i = 0; i < 24; i++) {
+            html += `<option value="${i}" ${i === defaultHour ? 'selected' : ''}>${formatHour(i)}</option>`;
+        }
+        return html;
+    }
+
+    function updatePreviewClock() {
+        const picker = document.getElementById('time-picker-1');
+        if (picker) {
+            const val = parseInt(picker.value);
+            const deg = (val % 12) * 30;
+            document.getElementById('preview-hour').style.transform = `rotate(${deg}deg)`;
+        }
+    }
+
+    function confirmTimeSettings() {
+        const t1 = parseInt(document.getElementById('time-picker-1').value);
+        
+        if (gameState.dailyDoses === 1) {
+            gameState.scheduledTimes = [t1];
+        } else {
+            const t2 = parseInt(document.getElementById('time-picker-2').value);
+            // 嚴格計算 T1 到 T2 的正向間隔
+            let diff = t2 - t1;
+            if (diff < 0) diff += 24;
+
+            // 依據新要求：從 8~12 變成 8~16
+            if (diff < 8 || diff > 16) {
+                showCustomAlert("1日服用2次，兩次給藥時間應間隔 8～16 小時，請重新調整設定！");
+                return;
+            }
+            gameState.scheduledTimes = [t1, t2];
+        }
+
+        buildScenarios();
+        document.getElementById('step-time-input').style.display = 'none';
+        document.getElementById('step-scenario').style.display = 'flex';
+        loadCurrentScenario();
+    }
+
+    function buildScenarios() {
+        const t1 = gameState.scheduledTimes[0];
+        const isQD = (gameState.dailyDoses === 1);
+        let targetTimes = [];
+
+        if (isQD) {
+            const nextDose = t1; 
+            targetTimes = [
+                // 預設情境1：第一次服藥時間 +3 小時
+                { missed: t1, now: (t1 + 3) % 24, status: [false], nextDose: nextDose, threshold: 12 },
+                // 預設情境2：第一次服藥時間 +5 小時
+                { missed: t1, now: (t1 + 5) % 24, status: [false], nextDose: nextDose, threshold: 12 },
+                // 預設情境3：第一次服藥時間 +13 小時
+                { missed: t1, now: (t1 + 13) % 24, status: [false], nextDose: nextDose, threshold: 12 }
+            ];
+        } else {
+            const t2 = gameState.scheduledTimes[1];
+            
+            let interval_t1_to_t2 = t2 - t1;
+            if (interval_t1_to_t2 <= 0) interval_t1_to_t2 += 24;
+            
+            // 計算情境 3 (+13小時) 時是否已經跨越了第二劑的時間點
+            let s3_now = (t1 + 13) % 24;
+            let isPastT2 = 13 >= interval_t1_to_t2;
+
+            targetTimes = [
+                // 預設情境1：第一次服藥時間 +3 小時
+                { missed: t1, now: (t1 + 3) % 24, status: [false, null], nextDose: t2, threshold: 6 },
+                // 預設情境2：第一次服藥時間 +5 小時
+                { missed: t1, now: (t1 + 5) % 24, status: [false, null], nextDose: t2, threshold: 6 },
+                // 預設情境3：第一次服藥時間 +13 小時
+                // 修改：若已超過第二劑時間，則設定第一劑有吃 (true)，漏服第二劑 (false)
+                { missed: isPastT2 ? t2 : t1, now: s3_now, status: isPastT2 ? [true, false] : [false, null], nextDose: isPastT2 ? t1 : t2, threshold: 6 }
+            ];
+        }
+
+        gameState.scenarios = targetTimes.map((cfg, idx) => {
+            // 計算距離「下次服藥」還有幾小時
+            let timeToNextDose = cfg.nextDose - cfg.now;
+            if (timeToNextDose <= 0) timeToNextDose += 24;
+
+            let correctAction = "";
+            let reason = "";
+            
+            // 判斷下次服藥時間是否跨越午夜變成「隔日」
+            let nextDoseStr = `${formatHour(cfg.nextDose)}`;
+            if (cfg.now + timeToNextDose >= 24) {
+                nextDoseStr = `隔日 ${formatHour(cfg.nextDose)}`;
+            }
+
+            // 全新核心原則判斷 (>= 12小時 或 >= 6小時)
+            if (timeToNextDose >= cfg.threshold) {
+                correctAction = "take";
+                reason = `離下次給藥時間（${nextDoseStr}），仍有間隔 ${cfg.threshold} 小時以上，因此應盡速補服。`;
+            } else {
+                correctAction = "skip";
+                reason = `離下次給藥時間（${nextDoseStr}），已不足間隔 ${cfg.threshold} 小時，因此不可補吃，等下次正常吃即可。`;
+            }
+
+            return {
+                id: idx + 1,
+                scenarioHour: cfg.now,
+                missedHour: cfg.missed,
+                statusArray: cfg.status,
+                offsetHours: (cfg.now - cfg.missed + 24) % 24,
+                correctAction: correctAction,
+                reason: reason
+            };
+        });
+    }
+
+    function renderTimeline(sc) {
+        let html = '<div class="timeline-container">';
+        if (gameState.dailyDoses === 1) {
+            const t1 = gameState.scheduledTimes[0];
+            html += `
+                <div class="timeline-node missed">
+                    <div class="time-label">${formatHour(t1)}</div>
+                    <div class="status-dot"></div>
+                    <div class="status-text">❌ 忘記吃藥</div>
+                </div>
+            `;
+        } else {
+            const t1 = gameState.scheduledTimes[0];
+            const t2 = gameState.scheduledTimes[1];
+            
+            const getNodeHtml = (time, status) => {
+                if (status === true) {
+                    return `
+                        <div class="timeline-node taken">
+                            <div class="time-label">${formatHour(time)}</div>
+                            <div class="status-dot"></div>
+                            <div class="status-text">✔️ 已服藥</div>
+                        </div>`;
+                } else if (status === false) {
+                    return `
+                        <div class="timeline-node missed">
+                            <div class="time-label">${formatHour(time)}</div>
+                            <div class="status-dot"></div>
+                            <div class="status-text">❌ 忘記吃藥</div>
+                        </div>`;
+                } else {
+                    return `
+                        <div class="timeline-node future">
+                            <div class="time-label">${formatHour(time)}</div>
+                            <div class="status-dot"></div>
+                            <div class="status-text">尚未到</div>
+                        </div>`;
+                }
+            };
+
+            html += getNodeHtml(t1, sc.statusArray[0]);
+            html += '<div class="timeline-line"></div>';
+            html += getNodeHtml(t2, sc.statusArray[1]);
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function loadCurrentScenario() {
+        const sc = gameState.scenarios[gameState.currentScenarioIndex];
+        document.getElementById('scenario-progress').innerText = `情境 ${sc.id} / 3`;
+        document.getElementById('scenario-drug-badge').innerText = `藥物：${gameState.drugName}`;
+        
+        // 更新現在時間的徽章文字
+        document.getElementById('current-time-badge').innerText = `現在時間：${formatHour(sc.scenarioHour)}`;
+
+        document.getElementById('timeline-area').innerHTML = renderTimeline(sc);
+        animateClockHands(sc.missedHour, sc.scenarioHour);
+    }
+
+    function animateClockHands(fromHour, toHour) {
+        const hourHand = document.getElementById('hour-hand');
+        const minHand = document.getElementById('minute-hand');
+        const digitalDisplay = document.getElementById('scenario-digital-clock');
+
+        const startDeg = (fromHour % 12) * 30;
+        hourHand.style.transform = `rotate(${startDeg}deg)`;
+        minHand.style.transform = `rotate(0deg)`;
+        digitalDisplay.innerText = formatHour(fromHour);
+
+        setTimeout(() => {
+            const targetDeg = startDeg + (toHour - fromHour) * 30;
+            hourHand.style.transform = `rotate(${targetDeg}deg)`;
+            digitalDisplay.innerText = formatHour(toHour);
+        }, 500);
+    }
+
+    function submitScenarioChoice(choice) {
+        const sc = gameState.scenarios[gameState.currentScenarioIndex];
+        const isCorrect = (choice === sc.correctAction);
+
+        gameState.userAnswers.push({
+            scenario: sc,
+            userChoice: choice,
+            isCorrect: isCorrect
+        });
+
+        if (gameState.currentScenarioIndex < 2) {
+            gameState.currentScenarioIndex++;
+            loadCurrentScenario();
+        } else {
+            showBentoSummary();
+        }
+    }
+
+    function showBentoSummary() {
+        document.getElementById('step-scenario').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'flex';
+
+        let correctCount = gameState.userAnswers.filter(a => a.isCorrect).length;
+        let rate = Math.round((correctCount / 3) * 100);
+        let level = "";
+        
+        if (correctCount <= 1) {
+            level = "低";
+        } else if (correctCount === 2) {
+            level = "中";
+        } else {
+            level = "高";
+        }
+        document.getElementById('final-score-stats').innerText = `答對率：${rate}% | 認知度：${level}`;
+
+        const grid = document.getElementById('bento-grid-results');
+        grid.innerHTML = '';
+
+        gameState.userAnswers.forEach((ans, idx) => {
+            const card = document.createElement('div');
+            card.className = `bento-card ${ans.isCorrect ? 'correct' : 'wrong'}`;
+
+            const hourDeg = (ans.scenario.scenarioHour % 12) * 30;
+            const userChoiceText = ans.userChoice === 'take' ? '✔️ 選擇：可以補用' : '❌ 選擇：不能補用';
+            const correctBadge = ans.isCorrect ? '✔️ 判定正確' : '❌ 判定錯誤';
+
+            card.innerHTML = `
+                <div class="bento-clock-mini">
+                    <div class="mini-hand" style="width:4px; height:32px; margin-left:-2px; transform:rotate(${hourDeg}deg);"></div>
+                    <div class="mini-hand" style="width:2px; height:42px; margin-left:-1px; transform:rotate(0deg); background:#666;"></div>
+                </div>
+                <div class="bento-card-title">情境 ${idx + 1} (漏服 ${formatHour(ans.scenario.missedHour)})</div>
+                <div style="font-size:1.1rem; color:#666; font-weight:bold;">目前時間：${formatHour(ans.scenario.scenarioHour)}</div>
+                <div class="bento-user-choice">${userChoiceText}</div>
+                <div class="bento-verdict ${ans.isCorrect ? 'correct' : 'wrong'}">${correctBadge}</div>
+                <div class="bento-explanation">
+                    <strong>💡 判定說明：</strong><br>${ans.scenario.reason}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // ==========================================
+        // 新增：根據藥物次數動態切換結算畫面的核心原則
+        // ==========================================
+        const summaryRuleText = document.getElementById('summary-rule-text');
+        if (gameState.dailyDoses === 1) {
+            summaryRuleText.innerHTML = "💡 核心原則：一天使用1次，與下一次給藥時間間隔12小時以上才可補用。";
+        } else {
+            summaryRuleText.innerHTML = "💡 核心原則：一天使用2次，與下一次給藥時間間隔6小時以上才可補用。";
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>平安醫館 - 異常出血處理判定</title>
+    <style>
+        :root {
+            font-size: 20px; 
+            /* 懷舊醫館與書本配色 */
+            --retro-wood-dark: #3E2723;
+            --retro-wood: #5C3A21;
+            --retro-wood-light: #8C6239;
+            --book-cover: #1E3A5F; /* 更深邃的懷舊藍色封面 */
+            --paper-bg: #F9EBC8; /* 米黃色書頁 */
+            --paper-shadow: #D1BFA5;
+            --text-dark: #2C1A0B;
+            --observe-color: #2E7D32; /* 再觀察 - 綠色 */
+            --urgent-color: #C62828;  /* 立即就醫 - 紅色 */
+        }
+
+		body {
+            margin: 0;
+            padding: 0;
+            background-color: #EFEBE9;
+            font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+            color: var(--text-dark);
+            user-select: none;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+            /* 初始背景：平安醫館外場景 */
+            background-image: url('平安醫館外場景.JPG'); 
+            background-size: 100% 100%;       /* 強制將圖片拉伸填滿螢幕（若螢幕比例差異不大，畫面不會變形且無黑邊） */
+            background-position: center center;
+            background-repeat: no-repeat; 
+            transition: background-image 0.8s ease;
+        }
+
+        /* 遊戲狀態背景切換：平安醫館內場景 */
+        body.game-active {
+            background-image: url('平安醫館內場景.JPG');
+            background-size: 100% 100%;
+            background-position: center center;
+        }
+            margin: 0;
+            padding: 0;
+            background-color: #EFEBE9;
+            font-family: "Microsoft JhengHei", "Noto Serif TC", serif;
+            color: var(--text-dark);
+            user-select: none;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+            /* 初始背景：平安醫館外場景 */
+            background-image: url('平安醫館外場景.JPG'); 
+            background-size: cover; 
+            background-position: center center; 
+            background-repeat: no-repeat; 
+            transition: background-image 0.8s ease;
+        }
+
+        /* 遊戲狀態背景切換：平安醫館內場景 */
+        body.game-active {
+            background-image: url('平安醫館內場景.JPG');
+        }
+
+        /* 背景淡化遮罩 */
+        #bg-dimmer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body.game-active #bg-dimmer {
+            opacity: 1;
+        }
+
+        /* --- 初始說明面板 --- */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            background: transparent;
+            transition: opacity 0.5s;
+        }
+        .intro-panel {
+            background-color: var(--paper-bg); 
+            border: 4px solid var(--retro-wood-dark); 
+            padding: 40px;
+            border-radius: 8px;
+            width: 85%;
+            max-width: 800px;
+            box-shadow: 10px 10px 25px rgba(0,0,0,0.7);
+            text-align: center;
+        }
+        .intro-panel p {
+            font-size: 1.4rem;
+            line-height: 1.8;
+            text-align: left;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .slogan {
+            color: var(--urgent-color);
+            text-align: left;
+            font-size: 1.6rem;
+            margin-top: 30px;
+            font-weight: bold;
+        }
+        #start-btn {
+            margin-top: 30px;
+            padding: 15px 50px;
+            font-size: 1.6rem;
+            font-family: inherit;
+            font-weight: bold;
+            background-color: var(--retro-wood);
+            color: #F9EBC8;
+            border: 3px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--retro-wood-dark);
+            transition: transform 0.1s;
+        }
+        #start-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px var(--retro-wood-dark);
+        }
+
+        /* --- 遊戲主介面 --- */
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* 3D 視角容器 */
+        #book-wrapper {
+            perspective: 1500px;
+            width: 90%;
+            max-width: 950px;
+            margin-bottom: 30px;
+        }
+
+        /* 藍色書本封面 */
+        #book-cover {
+            background-color: var(--book-cover);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 15px 20px 30px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* 米黃色書本內頁 (包含左右兩頁) */
+        #book-pages {
+            display: flex;
+            background-color: var(--paper-bg);
+            border-radius: 4px;
+            box-shadow: inset 0 0 30px rgba(139, 69, 19, 0.15);
+            min-height: 450px;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        /* 書本中央的摺痕陰影 (書脊) */
+        .spine-crease {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            transform: translateX(-50%);
+            background: linear-gradient(to right, 
+                rgba(255,255,255,0) 0%, 
+                rgba(0,0,0,0.1) 40%, 
+                rgba(0,0,0,0.25) 50%, 
+                rgba(0,0,0,0.1) 60%, 
+                rgba(255,255,255,0) 100%);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* 左右頁面排版 */
+        .page-left, .page-right {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .page-left {
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-right {
+            justify-content: center;
+        }
+        
+        #progress-counter {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 1.2rem;
+            color: var(--retro-wood-light);
+            font-weight: bold;
+            border-bottom: 2px dashed var(--retro-wood-light);
+            padding-bottom: 5px;
+        }
+
+        /* 左側：專屬情境圖片 */
+        #scenario-img {
+            max-width: 100%;
+            max-height: 350px;
+            width: auto;
+            object-fit: contain;
+            border: 4px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
+            background-color: #fff;
+            padding: 10px;
+        }
+
+        /* 右側：情境敘述文字 */
+        #current-scenario {
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1.6;
+            color: var(--retro-wood-dark);
+        }
+
+        /* --- 擬真翻頁動畫層 --- */
+        #flip-animation-page {
+            position: absolute;
+            top: 0; right: 0;
+            width: 50%; height: 100%;
+            background: linear-gradient(to left, var(--paper-bg) 95%, var(--paper-shadow) 100%);
+            transform-origin: left center;
+            transform: rotateY(0deg);
+            z-index: 20;
+            display: none;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+            border-radius: 0 4px 4px 0;
+        }
+        
+        /* 觸發翻頁時加入此 Class */
+        .is-flipping #flip-animation-page {
+            display: block;
+            animation: turnPage 0.7s ease-in-out forwards;
+        }
+
+        @keyframes turnPage {
+            0% { transform: rotateY(0deg); opacity: 1; }
+            50% { transform: rotateY(-90deg); opacity: 1; box-shadow: -15px 0 20px rgba(0,0,0,0.3); }
+            100% { transform: rotateY(-180deg); opacity: 0; }
+        }
+
+        /* --- 下方判定按鈕區 --- */
+        #action-area {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+        }
+        .action-btn {
+            background: #fff;
+            border: 6px solid;
+            border-radius: 12px;
+            width: 300px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+            font-family: inherit;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
+        }
+        #btn-observe { border-color: var(--observe-color); color: var(--observe-color); }
+        #btn-urgent { border-color: var(--urgent-color); color: var(--urgent-color); }
+
+        /* --- 結算畫面 --- */
+        #result-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .result-box {
+            background: var(--paper-bg);
+            border: 6px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+            height: 90%;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+        .result-header {
+            text-align: center;
+            border-bottom: 3px dashed var(--retro-wood);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .result-header h2 { margin: 0; font-size: 2.5rem; color: var(--retro-wood-dark); }
+        .rank-title { font-size: 2rem; font-weight: bold; color: var(--urgent-color); margin-top: 10px;}
+        .rank-desc { font-size: 1.2rem; line-height: 1.6; margin-top: 10px; font-weight: bold; color: var(--retro-wood-dark); }
+        
+        .result-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 15px;
+            margin-top: 10px;
+        }
+        .result-item {
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid var(--retro-wood-light);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .result-item.correct { border-left: 10px solid var(--observe-color); }
+        .result-item.wrong { border-left: 10px solid var(--urgent-color); }
+        
+        .item-scenario { font-size: 1.2rem; font-weight: bold; margin-bottom: 8px; }
+        .item-explanation { font-size: 1.1rem; color: #444; line-height: 1.5; background: #e8e0d5; padding: 10px; border-radius: 5px; }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .footer-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .restart-btn {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-family: inherit;
+            font-weight: bold;
+            background-color: var(--retro-wood);
+            color: #F9EBC8;
+            border: 3px solid var(--retro-wood-dark);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--retro-wood-dark);
+        }
+        .restart-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0px var(--retro-wood-dark);
+        }
+        
+        .disclaimer {
+            font-size: 0.95rem;
+            color: #555;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        /* CoaguPlay platform navigation; kept outside the game layout. */
+        .cq-home-link {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            z-index: 50;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            border: 2px solid #0F766E;
+            border-radius: 999px;
+            background: #F0FDFA;
+            color: #134E4A;
+            box-shadow: 0 3px 10px rgba(15, 38, 39, 0.22);
+            font: 700 15px/1.2 "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .cq-home-link:hover { background: #CCFBF1; }
+        .cq-home-link:focus-visible {
+            outline: 3px solid #F59E0B;
+            outline-offset: 3px;
+        }
+        .cq-home-link--result {
+            position: static;
+            align-self: center;
+            flex-shrink: 0;
+            margin: 12px auto 0;
+        }
+
+        .footer-actions {
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .footer-actions .cq-home-link--result { margin: 0; }
+    </style>
+</head>
+<body>
+
+<div id="bg-dimmer"></div>
+
+<!-- 初始說明面板 -->
+<div id="intro-screen">
+    <div class="intro-panel">
+        <p>★歡迎回來平安醫館，您是醫館的新學徒，請完成今日師父交辦的學習作業</p>
+        <p>★今天主要學習任務：使用抗凝血藥物病患出現出血情況時，請協助判斷是否需立即就醫或是可再觀察</p>
+        <div class="slogan">★「抗凝藥安全，出血別心慌：輕重分得清，安全有保障！」</div>
+        <button id="start-btn" onclick="startGame()">開始</button>
+    </div>
+</div>
+
+<!-- 遊戲主容器 -->
+<div id="game-container">
+    <a class="cq-home-link" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    
+    <!-- 3D 藍色封面書本區 -->
+    <div id="book-wrapper">
+        <div id="book-cover">
+            <div id="book-pages">
+                
+                <!-- 書脊摺痕 -->
+                <div class="spine-crease"></div>
+
+                <!-- 翻頁動畫用圖層 (動態覆蓋在右頁上，翻向左頁) -->
+                <div id="flip-animation-page"></div>
+
+                <!-- 左側頁面 (情境專屬圖片) -->
+                <div class="page-left">
+                    <img id="scenario-img" src="" alt="情境圖片" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 200%22><rect width=%22200%22 height=%22200%22 fill=%22%23eee%22/><text x=%22100%22 y=%22100%22 font-size=%2220%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23999%22>請確認圖片檔名</text></svg>'">
+                </div>
+                
+                <!-- 右側頁面 (情境敘述) -->
+                <div class="page-right">
+                    <span id="progress-counter">1 / 10</span>
+                    <div id="current-scenario">情境敘述載入中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下方判定按鈕區 -->
+    <div id="action-area">
+        <button class="action-btn" id="btn-observe" onclick="submitAnswer('observe')">🔍 可再觀察</button>
+        <button class="action-btn" id="btn-urgent" onclick="submitAnswer('urgent')">🚑 立即就醫</button>
+    </div>
+</div>
+
+<!-- 結算畫面 -->
+<div id="result-screen">
+    <div class="result-box">
+        <div class="result-header">
+            <h2>醫館學徒考核報告</h2>
+            <div class="rank-title" id="final-rank-title">學徒等級</div>
+            <div class="rank-desc" id="final-rank-desc">評語載入中...</div>
+        </div>
+        
+        <div class="result-list" id="result-list">
+            <!-- 結算項目動態生成於此 -->
+        </div>
+
+        <div class="disclaimer">
+            💡 本測驗為衛教認知前/後測之評估工具，無法取代藥師與醫師的專業衛教指導。實際發生出血狀況時，若有疑慮請務必諮詢專業醫療人員。
+        </div>
+
+        <div class="footer-actions">
+            <button class="restart-btn" onclick="location.reload()">再次接受考驗</button>
+            <a class="cq-home-link cq-home-link--result" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 情境題庫資料 (對應 Prompt 指定內容與檔名)
+    const allScenarios = [
+        // --- 再觀察 (Observe) ---
+        { 
+            desc: "早上刷牙時，牙齦流了一點血，大概一兩分鐘就止住了，沒有再流血", 
+            img: "刷牙出血.png",
+            category: "observe", 
+            explanation: "少量牙齦出血且很快止血，可先觀察；若經常發生或越來越嚴重，應回診告知醫師"
+        },
+        { 
+            desc: "擤鼻涕時流了一點鼻血，用衛生紙按壓幾分鐘後就止住了", 
+            img: "流鼻血.png",
+            category: "observe", 
+            explanation: "短暫且容易止住的流鼻血，可先觀察；若反覆發生或不易止血，應盡快就醫"
+        },
+        { 
+            desc: "洗澡時發現手臂多了一小塊瘀青，但沒有撞到，也沒有變大", 
+            img: "小瘀青無碰撞.png",
+            category: "observe", 
+            explanation: "小範圍瘀青可先觀察，但若瘀青越來越大、越來越多或沒有原因，就應盡快就醫"
+        },
+        { 
+            desc: "上廁所後，觀察排泄物和平常一樣，只是清理時發現衛生紙沾到一點點鮮紅色的血", 
+            img: "廁後清理有血.png",
+            category: "observe", 
+            explanation: "少量鮮紅色血液可能與痔瘡等因素有關，可先觀察；若反覆發生、出血增加或伴隨其他異常症狀，應盡快就醫。"
+        },
+        { 
+            desc: "切水果時不小心割到手，按壓十分鐘後就止血了，出血量跟之前差不多", 
+            img: "意外受傷.png",
+            category: "observe", 
+            explanation: "意外受傷要留意出血量、止血時間，如果跟先前經驗差不多，再觀察即可。"
+        },
+        
+        // --- 立即就醫 (Urgent) ---
+        { 
+            desc: "跌倒擦傷膝蓋，已經按壓傷口二十多分鐘，血還是一直滲出來", 
+            img: "受傷流血不止.png",
+            category: "urgent", 
+            explanation: "傷口持續出血超過15～30分鐘仍無法止血，代表可能有嚴重出血風險，應立即就醫"
+        },
+        { 
+            desc: "昨天不小心撞到後手肘有一小塊瘀青，今天整片手臂都變成紫黑色，而且還一直擴大", 
+            img: "大片瘀青.png",
+            category: "urgent", 
+            explanation: "不明原因大片瘀青或持續擴散，可能代表體內出血或抗凝作用過強，應立即就醫。"
+        },
+        { 
+            desc: "大便顏色黑黑的，而且像柏油一樣，又黏又臭", 
+            img: "黑便.png",
+            category: "urgent", 
+            explanation: "黑便需先排除食物影響，伴隨有腐臭味的黑便或瀝青便可能是上消化道出現問題的癥兆，是異常出血的重要警訊，不可拖延。"
+        },
+        { 
+            desc: "上廁所時，發現尿液很紅，像摻了血一樣", 
+            img: "血尿.png",
+            category: "urgent", 
+            explanation: "血尿可能代表泌尿道出血，排除食物影響後，應立即接受進一步醫療評估。"
+        },
+        { 
+            desc: "突然頭痛得很厲害，休息後也沒有改善", 
+            img: "劇烈頭痛.png",
+            category: "urgent", 
+            explanation: "劇烈頭痛可能代表顱內出血，即使沒有外傷，也應立即就醫。"
+        }
+    ];
+
+    let gameScenarios = [];
+    let currentRound = 0;
+    let score = 0;
+    let userAnswers = [];
+    let isAnimating = false;
+
+    function startGame() {
+        document.getElementById('intro-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.body.classList.add('game-active');
+            document.getElementById('game-container').style.display = 'flex';
+            initGame();
+        }, 500);
+    }
+
+    function initGame() {
+        // 隨機打亂題庫
+        gameScenarios = [...allScenarios].sort(() => 0.5 - Math.random());
+        currentRound = 0;
+        score = 0;
+        userAnswers = [];
+        loadScenario();
+    }
+
+    function loadScenario() {
+        if (currentRound < gameScenarios.length) {
+            const scenario = gameScenarios[currentRound];
+            document.getElementById('progress-counter').innerText = `${currentRound + 1} / ${gameScenarios.length}`;
+            document.getElementById('current-scenario').innerText = scenario.desc;
+            // 每次載入時更新左側圖片
+            document.getElementById('scenario-img').src = scenario.img;
+        } else {
+            showResult();
+        }
+    }
+
+    function submitAnswer(selectedCategory) {
+        if (isAnimating) return; // 動畫期間鎖定按鈕，防止狂按
+        isAnimating = true;
+
+        const currentScenario = gameScenarios[currentRound];
+        const isCorrect = (selectedCategory === currentScenario.category);
+        
+        if (isCorrect) score += 10;
+
+        userAnswers.push({
+            scenario: currentScenario,
+            selected: selectedCategory,
+            isCorrect: isCorrect
+        });
+
+        // 觸發 3D 翻書特效
+        const bookPages = document.getElementById('book-pages');
+        bookPages.classList.add('is-flipping');
+        
+        // 當動畫播到一半 (書頁翻到中間時) 瞬間切換下一題的內容
+        setTimeout(() => {
+            currentRound++;
+            loadScenario();
+        }, 350); // 動畫總長 0.7s，取中間值
+
+        // 動畫結束後復原狀態
+        setTimeout(() => {
+            bookPages.classList.remove('is-flipping');
+            isAnimating = false;
+        }, 700);
+    }
+
+    function getCategoryLabel(cat) {
+        return cat === 'observe' ? '🔍 可再觀察' : '🚑 立即就醫';
+    }
+
+    function getBadgeColor(cat) {
+        return cat === 'observe' ? 'var(--observe-color)' : 'var(--urgent-color)';
+    }
+
+    function showResult() {
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'flex';
+        
+        // 分級評語
+        let rankTitle = "";
+        let rankDesc = "";
+        if (score >= 95) {
+            rankTitle = "【 出師學徒 】 " + score + " 分";
+            rankDesc = "恭喜！你已能正確辨識大部分異常出血情況，面對服用抗凝血藥物時，知道哪些狀況可以觀察、哪些需要立即就醫。";
+        } else if (score >= 80) {
+            rankTitle = "【 熟練學徒 】 " + score + " 分";
+            rankDesc = "你的判斷能力不錯，但仍有少數情況需要加強。建議再複習異常出血警訊，提升應變能力。";
+        } else if (score >= 60) {
+            rankTitle = "【 見習學徒 】 " + score + " 分";
+            rankDesc = "你已具備基本概念，但對部分危險徵兆仍不夠熟悉，建議重新閱讀衛教內容後再次挑戰。";
+        } else {
+            rankTitle = "【 初入醫館 】 " + score + " 分";
+            rankDesc = "師父提醒你：「判斷出血情況是安全用藥的重要一環。」請重新學習衛教內容，再接受一次考驗。";
+        }
+
+        document.getElementById('final-rank-title').innerText = rankTitle;
+        document.getElementById('final-rank-desc').innerText = rankDesc;
+
+        // 生成結算清單
+        const listContainer = document.getElementById('result-list');
+        listContainer.innerHTML = '';
+
+        userAnswers.forEach(ans => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `result-item ${ans.isCorrect ? 'correct' : 'wrong'}`;
+            
+            const correctBadgeHtml = ans.isCorrect 
+                ? `<span style="color:var(--observe-color); font-weight:bold;">✔️ 判斷正確！</span>` 
+                : `<span style="color:var(--urgent-color); font-weight:bold;">❌ 需注意！正確處置應為：${getCategoryLabel(ans.scenario.category)}</span>`;
+
+            itemDiv.innerHTML = `
+                <div class="item-scenario">情境：${ans.scenario.desc}</div>
+                <div>
+                    <span class="badge" style="background-color: ${getBadgeColor(ans.selected)};">
+                        您的選擇：${getCategoryLabel(ans.selected)}
+                    </span>
+                    <span style="margin-left: 10px;">${correctBadgeHtml}</span>
+                </div>
+                <div class="item-explanation" style="margin-top: 10px;">
+                    <strong>🧔 師父講解：</strong><br>${ans.scenario.explanation}
+                </div>
+            `;
+            listContainer.appendChild(itemDiv);
+        });
+    }
+</script>
+</body>
+</html>

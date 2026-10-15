@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>心安藥房 - 居家常備藥與保健品把關大挑戰</title>
+    <style>
+        :root {
+            font-size: 20px; 
+            --retro-wood: #5C3A21;
+            --retro-wood-light: #8C6239;
+            --paper-bg: #F5DEB3;
+            --glass-bg: rgba(255, 250, 230, 0.85);
+            --text-dark: #3E2723;
+            --safe-color: #2E7D32;
+            --avoid-color: #C62828;
+            --consult-color: #E65100;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #EFEBE9;
+            font-family: "Microsoft JhengHei", "Noto Serif TC", serif;
+            color: var(--text-dark);
+            user-select: none;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+            /* 初始背景：心安藥房內場景 */
+            background-image: url('心安藥房內場景.JPG'); 
+            background-size: cover; 
+            background-position: center center; 
+            background-repeat: no-repeat; 
+            transition: background-image 0.8s ease;
+        }
+
+        /* 遊戲狀態背景切換 */
+        body.game-active {
+            background-image: url('藥房櫃台場景.JPG');
+        }
+
+        /* 背景淡化遮罩 */
+        #bg-dimmer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body.game-active #bg-dimmer {
+            opacity: 1;
+        }
+
+        /* --- 初始說明面板 --- */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            background: transparent;
+            transition: opacity 0.5s;
+        }
+        .intro-panel {
+            background-color: var(--paper-bg); 
+            border: 6px solid var(--retro-wood); 
+            padding: 40px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 10px 10px 20px rgba(0,0,0,0.6), inset 0 0 50px rgba(200, 150, 100, 0.3);
+            text-align: center;
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.08"/></svg>');
+        }
+        .intro-panel h2 {
+            color: #8B0000;
+            font-size: 2.2rem;
+            margin-top: 0;
+            border-bottom: 3px dashed var(--retro-wood);
+            padding-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .intro-panel p {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            text-align: left;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        #start-btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background-color: var(--retro-wood-light);
+            color: white;
+            border: 4px solid var(--retro-wood);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--retro-wood);
+            transition: transform 0.1s;
+        }
+        #start-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px var(--retro-wood);
+        }
+
+        /* --- 遊戲主介面 --- */
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* 玻璃桌面上方的淺黃區塊 (展示物品) */
+        #item-display-area {
+            background: var(--glass-bg);
+            border: 4px solid var(--retro-wood);
+            border-radius: 15px;
+            width: 60%;
+            max-width: 600px;
+            height: 500px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
+            position: relative;
+            animation: popIn 0.4s ease-out;
+        }
+
+        #current-item-img {
+            width: 350px;
+            height: 350px;
+            object-fit: contain;
+            filter: drop-shadow(3px 5px 5px rgba(0,0,0,0.4));
+            margin-bottom: 15px;
+        }
+        #current-item-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--retro-wood);
+            margin: 0;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 5px 20px;
+            border-radius: 5px;
+        }
+        #progress-counter {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* 分類按鈕區 */
+        #action-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        .action-btn {
+            background: #fff;
+            border: 5px solid;
+            border-radius: 15px;
+            width: 250px;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .action-btn:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 25px rgba(0,0,0,0.3);
+        }
+        .action-btn:active {
+            transform: translateY(0);
+        }
+        .action-img {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 15px;
+            object-fit: contain;
+        }
+        .action-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        /* 按鈕外框顏色 */
+        #btn-safe { border-color: var(--safe-color); color: var(--safe-color); }
+        #btn-avoid { border-color: var(--avoid-color); color: var(--avoid-color); }
+        #btn-consult { border-color: var(--consult-color); color: var(--consult-color); }
+
+        /* 提示文字 (游標移動出現) */
+        .tooltip {
+            position: absolute;
+            bottom: -40px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 1rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .action-btn:hover .tooltip { opacity: 1; }
+
+        /* --- 結算畫面 --- */
+        #result-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .result-box {
+            background: var(--paper-bg);
+            border: 6px solid var(--retro-wood);
+            border-radius: 15px;
+            width: 85%;
+            max-width: 1000px;
+            height: 85%;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .result-header {
+            text-align: center;
+            border-bottom: 3px solid var(--retro-wood);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .result-header h2 { margin: 0; font-size: 2rem; color: #8B0000; }
+        .score-display { font-size: 1.5rem; font-weight: bold; color: var(--text-dark); margin-top: 10px;}
+        
+        .result-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+        .result-item {
+            background: #fff;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .result-item.correct { border-left: 8px solid var(--safe-color); }
+        .result-item.wrong { border-left: 8px solid var(--avoid-color); }
+        .result-item.partial { border-left: 8px solid var(--consult-color); }
+		
+        .result-item-content { margin-left: 15px; flex: 1; }
+        .result-item-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 5px 0; }
+        .result-item-desc { font-size: 1rem; color: #444; line-height: 1.5; margin: 0; }
+        .user-choice-badge {
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .footer-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .restart-btn {
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 2px 4px 8px rgba(0,0,0,0.3);
+            background-color: #27AE60;
+        }
+        
+        .disclaimer {
+            font-size: 0.9rem;
+            color: #555;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        /* CoaguPlay platform navigation; kept outside the game layout. */
+        .cq-home-link {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            z-index: 50;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            box-sizing: border-box;
+            padding: 8px 14px;
+            border: 2px solid #0F766E;
+            border-radius: 999px;
+            background: #F0FDFA;
+            color: #134E4A;
+            box-shadow: 0 3px 10px rgba(15, 38, 39, 0.22);
+            font: 700 15px/1.2 "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .cq-home-link:hover { background: #CCFBF1; }
+        .cq-home-link:focus-visible {
+            outline: 3px solid #F59E0B;
+            outline-offset: 3px;
+        }
+        .cq-home-link--result {
+            position: static;
+            align-self: center;
+            flex-shrink: 0;
+            margin: 12px auto 0;
+        }
+
+        .footer-actions {
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .footer-actions .cq-home-link--result { margin: 0; }
+
+        @media (max-height: 800px) {
+            #game-container {
+                overflow-y: auto;
+                justify-content: safe center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="bg-dimmer"></div>
+
+<!-- 初始說明面板 -->
+<div id="intro-screen">
+    <div class="intro-panel">
+        <h2>★ 歡迎來到心安藥局 ★</h2>
+        <p>★ 您今日幫家人跑腿採買居家常備藥與保健品。</p>
+        <p>★ 目前家中有人使用抗凝血藥物 (Warfarin 或 NOACs)，請協助把關居家常備藥、保健品使用的適當性。</p>
+        <p style="color: #C62828; text-align: center; font-size: 1.6rem;">「用藥安全，你我有責！」</p>
+        <button id="start-btn" onclick="startGame()">開始選購</button>
+    </div>
+</div>
+
+<!-- 遊戲主容器 -->
+<div id="game-container">
+    <a class="cq-home-link" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+    <div id="item-display-area">
+        <span id="progress-counter">1 / 10</span>
+        <img id="current-item-img" alt="商品圖片" onerror="this.style.display='none'">
+        <h2 id="current-item-name">商品名稱</h2>
+    </div>
+
+    <div id="action-area">
+        <div class="action-btn" id="btn-safe" onclick="selectCategory('safe')">
+            <img class="action-img" src="茄芷袋.png" alt="茄芷袋" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%2250%22 font-size=%2240%22>🛍️</text></svg>'">
+            <div class="action-text">可用 / 買</div>
+            <div class="tooltip">放入茄芷購物袋</div>
+        </div>
+        
+        <div class="action-btn" id="btn-avoid" onclick="selectCategory('avoid')">
+            <img class="action-img" src="購物籃.png" alt="購物籃" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%2250%22 font-size=%2240%22>🧺</text></svg>'">
+            <div class="action-text">不可用 / 不買</div>
+            <div class="tooltip">放回購物籃</div>
+        </div>
+
+        <div class="action-btn" id="btn-consult" onclick="selectCategory('consult')">
+            <img class="action-img" src="醫療專業人員.png" alt="醫療專業人員" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%2250%22 font-size=%2240%22>🛎️</text></svg>'">
+            <div class="action-text">不確定 / 須詢問</div>
+            <div class="tooltip">詢問醫療專業人員</div>
+        </div>
+    </div>
+</div>
+
+<!-- 結算畫面 -->
+<div id="result-screen">
+    <div class="result-box">
+        <div class="result-header">
+            <h2>衛教認知確認報告</h2>
+            <div class="score-display">知識準確度評分：<span id="final-score">0</span> 分</div>
+        </div>
+        
+        <div class="result-list" id="result-list">
+            <!-- 結算項目動態生成於此 -->
+        </div>
+
+        <div class="disclaimer">
+            💡 本測驗為認知前/後測之評估工具，無法取代藥師的專業衛教指導。若對您的用藥紀錄與保健品交互作用有任何疑問，請務必諮詢專業醫療人員。
+        </div>
+
+        <div class="footer-actions">
+            <button class="restart-btn" onclick="location.reload()">重新挑戰</button>
+            <a class="cq-home-link cq-home-link--result" href="../../../index.html"><span aria-hidden="true">←</span>&nbsp;返回 CoaguPlay 首頁</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 題庫資料：已根據腳本重新核對正確的 category
+    const allItemsData = [
+        // --- 可用 (Safe) ---
+        { name: "UCII", category: "safe", img: "UCII.png", desc: "UC-II主要成分為未變性第二型膠原蛋白，目前沒有研究證實會影響Warfarin或NOACs的作用。提醒：若為複方產品，仍須確認是否添加其他草本成分。" },
+        { name: "枇杷膏", category: "safe", img: "枇杷膏.png", desc: "一般枇杷膏主要用於止咳化痰，目前沒有證據顯示會影響抗凝血藥效果。" },
+        { name: "苦瓜胜肽", category: "safe", img: "苦瓜胜肽.png", desc: "目前沒有證據顯示會影響抗凝血藥效果。" },
+        { name: "胃散", category: "safe", img: "胃散.png", desc: "一般胃散主要成分為制酸劑，目前沒有證據顯示會影響抗凝血藥效果。" },
+        { name: "補體素", category: "safe", img: "補體素.png", desc: "一般完整營養配方是可安心使用。若特殊疾病配方，仍應詢問醫療人員。" },
+        { name: "整腸錠", category: "safe", img: "整腸錠.png", desc: "目前沒有證據顯示會影響抗凝血藥效果。" },
+        { name: "龍角散", category: "safe", img: "龍角散.png", desc: "目前沒有證據顯示會影響抗凝血藥效果。" },
+        
+        // --- 不可用 (Avoid) ---
+        { name: "四物飲", category: "avoid", img: "四物飲.png", desc: "四物飲含當歸、川芎可能增加出血風險，不建議自行使用。" },
+        { name: "止痛藥(消炎)", category: "avoid", img: "止痛藥(消炎).png", desc: "NSAIDs類消炎止痛藥物，有抑制血小板凝集、增加腸胃出血之風險，如有止痛需求，應向醫師或藥師詢問。" },
+        { name: "大蒜精", category: "avoid", img: "大蒜精.png", desc: "大蒜入菜不影響，但高濃度攝取有抑制血小板作用，可能增加出血風險。" },
+        { name: "鳳梨酵素", category: "avoid", img: "鳳梨酵素.png", desc: "鳳梨酵素（Bromelain）可能影響血小板功能，增加出血風險。" },
+        { name: "薑黃素", category: "avoid", img: "薑黃素.png", desc: "薑黃素具有抗血小板作用，因市售產品多有添加黑胡椒萃取的胡椒鹼，以大幅提升薑黃素的吸收率，故併用抗凝血藥物時，會增加出血風險。" },
+        { name: "蔓越莓萃取", category: "avoid", img: "蔓越莓萃取.png", desc: "一般食用少量蔓越莓食品通常不需過度擔心，但若是使用高濃縮產品有案例會增加Warfarin療效之情況。" },
+        { name: "銀杏葉萃取", category: "avoid", img: "銀杏葉萃取.png", desc: "銀杏葉會抑制血小板凝血因子，有促進血液循環作用，併用抗凝血劑可能增強嚴重出血風險。補充：銀杏果一般作為食材與化痰止咳中藥材使用，抗凝血作用極輕微，但生食或過量會有中毒風險。" },
+        { name: "納豆+Q10", category: "avoid", img: "納豆+Q10.png", desc: "納豆激酶具溶解血栓與抗凝血特性；Q10則是在部分臨床討論結果被認為會減弱Warfarin之效用。補充：納豆食品富含維生素K2，與納豆激酶不同，併用Warfarin反而是會減弱其藥效。" },
+
+        // --- 問藥師或醫師 (Consult) ---
+		{ name: "芝麻明EX", category: "consult", img: "芝麻明EX.png", desc: "芝麻素目前沒有證據顯示會影響抗凝血藥效果。但市售產品有可能添加少量維生素E，高劑量維他命E(>400 IU/天)會增強抗凝血藥物Warfarin藥效，而增加出血風險，故如有使用需求請先向醫療專業人員諮詢。" },
+        { name: "B群", category: "consult", img: "B群.png", desc: "一般B群與抗凝血藥物無明顯交互作用，但高劑量(>1公克/天)的菸鹼素可能影響Warfarin凝血參數(INR)、增加出血風險。市面綜合維生素若添加維生素K，可能減弱Warfarin療效，故使用前可先向醫療專業人員諮詢。" },
+        { name: "人參飲", category: "consult", img: "人參飲.png", desc: "人參在抗凝血藥物有雙重性影響，藥材富含人參皂甘具延緩凝血作用，但對於Warfarin併用之研究顯示會減弱抗凝血功效，故使用上應尋求專業人員建議。" },
+        { name: "紅麴", category: "consult", img: "紅麴.png", desc: "紅麴含有具類似降血脂藥成分的 Monacolin K，它會降低抗凝血劑Warfarin的代謝，使藥物血中濃度增加，故不建議一起併用。" },
+        { name: "魚油", category: "consult", img: "魚油.png", desc: "魚油具有抗血小板凝集、讓血液較流暢的抗凝血作用。高劑量魚油使用(>2公克/天)會增加出血或瘀青的風險。" },
+        { name: "止痛藥(普拿疼)", category: "consult", img: "止痛藥(普拿疼).png", desc: "正常劑量下，它是相對安全的退燒止痛藥選擇，但過量(>2g/天)使用仍是有增加肝代謝負擔而增加抗凝血藥物出血之風險。" },
+        { name: "葡萄糖胺", category: "consult", img: "葡萄糖胺.png", desc: "高劑量葡萄糖胺(>500mg/天)與抗凝血藥物併用時，有增加Warfarin凝血參數(INR)之案例報告。" },
+        { name: "葉黃素", category: "consult", img: "葉黃素.png", desc: "葉黃素對於抗凝血藥物影響不高，但市面多為複方藥物，可能添加增強出血風險的成分，故使用前應尋求專業人員之建議。" },
+        { name: "營養液", category: "consult", img: "營養液.png", desc: "市售營養液成分組成多樣，若含有豐富的黃豆發酵液，維生素K含量高，可能降低抗凝血藥物Warfarin的療效，建議應向醫療專業人員先進行諮詢。" }
+    ];
+
+    let gameItems = [];
+    let currentRound = 0;
+    let score = 0;
+    let userAnswers = [];
+    const TOTAL_QUESTIONS = 10; 
+
+    function startGame() {
+        document.getElementById('intro-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.body.classList.add('game-active');
+            document.getElementById('game-container').style.display = 'flex';
+            initGame();
+        }, 500);
+    }
+
+    function initGame() {
+        gameItems = [...allItemsData].sort(() => 0.5 - Math.random()).slice(0, TOTAL_QUESTIONS);
+        currentRound = 0;
+        score = 0;
+        userAnswers = [];
+        loadItem();
+    }
+
+    function loadItem() {
+        if (currentRound < gameItems.length) {
+            const item = gameItems[currentRound];
+            document.getElementById('progress-counter').innerText = `${currentRound + 1} / ${gameItems.length}`;
+            document.getElementById('current-item-name').innerText = item.name;
+            
+            const imgElement = document.getElementById('current-item-img');
+            imgElement.style.display = 'block';
+            imgElement.src = item.img;
+            
+            const displayArea = document.getElementById('item-display-area');
+            displayArea.style.animation = 'none';
+            displayArea.offsetHeight; 
+            displayArea.style.animation = 'popIn 0.4s ease-out';
+        } else {
+            showResult();
+        }
+    }
+
+    function selectCategory(selectedCategory) {
+        const currentItem = gameItems[currentRound];
+        const isCorrect = (selectedCategory === currentItem.category);
+        let earnedScore = 0;
+		
+        if (isCorrect) {
+            earnedScore = 10; // 正確選擇獲得 10 分
+        } else if (selectedCategory === 'consult') {
+            earnedScore = 5;  // 答錯但選擇詢問獲得 5 分
+        }
+
+        score += earnedScore;
+		
+        userAnswers.push({
+            item: currentItem,
+            selected: selectedCategory,
+            isCorrect: isCorrect,
+            earnedScore: earnedScore 
+        });
+
+        const displayArea = document.getElementById('item-display-area');
+        displayArea.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            displayArea.style.transform = 'scale(1)';
+            currentRound++;
+            loadItem();
+        }, 150);
+    }
+
+    function getCategoryLabel(cat) {
+        if (cat === 'safe') return '可用/買 (茄芷袋)';
+        if (cat === 'avoid') return '不可用/不買 (購物籃)';
+        if (cat === 'consult') return '不確定/須詢問 (醫療專業人員)';
+        return '未知';
+    }
+
+    function getBadgeColor(cat) {
+        if (cat === 'safe') return 'var(--safe-color)';
+        if (cat === 'avoid') return 'var(--avoid-color)';
+        if (cat === 'consult') return 'var(--consult-color)';
+        return '#999';
+    }
+
+    function showResult() {
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'flex';
+        
+        document.getElementById('final-score').innerText = Math.round(score);
+
+        const listContainer = document.getElementById('result-list');
+        listContainer.innerHTML = '';
+
+        userAnswers.forEach(ans => {
+            const itemDiv = document.createElement('div');
+            
+            if (ans.isCorrect) {
+                itemDiv.className = 'result-item correct';
+            } else if (ans.selected === 'consult') {
+                itemDiv.className = 'result-item partial';
+            } else {
+                itemDiv.className = 'result-item wrong';
+            }
+            
+            let statusBadgeHtml = '';
+            if (ans.isCorrect) {
+                statusBadgeHtml = `<span style="color:var(--safe-color); font-weight:bold;">✔️ 答對了！(+${ans.earnedScore}分)</span>`;
+            } else if (ans.selected === 'consult') {
+                statusBadgeHtml = `<span style="color:var(--consult-color); font-weight:bold;">⚠️ 具備基本警覺，主動詢問專業人員 (+${ans.earnedScore}分)。正確建議為：${getCategoryLabel(ans.item.category)}</span>`;
+            } else {
+                statusBadgeHtml = `<span style="color:var(--avoid-color); font-weight:bold;">❌ 需注意！正確分類應為：${getCategoryLabel(ans.item.category)}</span>`;
+            }
+
+            itemDiv.innerHTML = `
+                <div class="result-item-content">
+                    <h3 class="result-item-title">${ans.item.name}</h3>
+                    <p class="result-item-desc">${ans.item.desc}</p>
+                    <div style="margin-top: 10px;">
+                        <span class="user-choice-badge" style="background-color: ${getBadgeColor(ans.selected)};">
+                            您的選擇：${getCategoryLabel(ans.selected)}
+                        </span>
+                        <span style="margin-left: 10px;">${statusBadgeHtml}</span>
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(itemDiv);
+        });
+    }
+</script>
+</body>
+</html>
